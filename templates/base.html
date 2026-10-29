@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Finder's Central — Campus Lost & Found{% endblock %}</title>
+    
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard') if (session.get('user') and request.path != '/') else url_for('welcome') }}" class="brand-logo">
+                <span class="logo-icon">🔍</span>
+                <span class="logo-text">Finder's <strong>Central</strong></span>
+                <span class="logo-badge">Campus</span>
+            </a>
+
+            {# Expose application navigation only after a mode (Student or Guest) has been chosen #}
+            {% if session.get('user') and request.path != '/' %}
+            <nav class="nav-links" id="main-nav-links">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.path == '/dashboard' or request.path == '/dashboard_guest' %}active{% endif %}">Dashboard</a>
+                <a href="{{ url_for('matches') }}" class="nav-link {% if request.path == '/matches' %}active{% endif %}">See Matches{% if matches_count and matches_count > 0 %} <span class="nav-badge" style="background: var(--primary); color: #fff; font-size: 0.72rem; padding: 2px 7px; border-radius: var(--radius-full); font-weight: 700; margin-left: 4px;">{{ matches_count }}</span>{% endif %}</a>
+                <a href="{{ url_for('reports') }}" class="nav-link {% if request.path == '/reports' %}active{% endif %}">All Reports</a>
+                <a href="{{ url_for('report') }}" class="nav-link {% if request.path == '/report' %}active{% endif %}">Report Item</a>
+                {% if session.get('user') != 'Guest' %}
+                <a href="{{ url_for('my_reports') }}" class="nav-link {% if request.path == '/my_reports' %}active{% endif %}">My Reports</a>
+                {% elif session.get('claimed_reports') %}
+                <a href="{{ url_for('guest_my_reports') }}" class="nav-link {% if request.path == '/guest/my_reports' %}active{% endif %}">My Guest Reports ({{ session.get('claimed_reports')|length }})</a>
+                {% endif %}
+            </nav>
+            {% endif %}
+
+            <div class="nav-actions">
+                <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle color theme" title="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+
+                {# Mode-specific controls only shown when an active mode exists and not on welcome landing page #}
+                {% if session.get('user') and request.path != '/' %}
+                    {% if session.get('user') != 'Guest' %}
+                    <div class="user-pill">
+                        <span class="user-avatar">👤</span>
+                        <span class="user-id" title="{{ session.get('user') }}">{{ session.get('user') }}</span>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="btn-logout" title="Log out">Logout</a>
+                    {% else %}
+                    <div class="guest-pill">
+                        <span class="guest-dot"></span>
+                        <span class="guest-label">Guest</span>
+                    </div>
+                    <a href="{{ url_for('login') }}" class="btn-login-header">Student Login</a>
+                    <a href="{{ url_for('logout') }}" class="btn-logout" title="Exit Guest Mode">Exit</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-messages-container" style="max-width: 1200px; margin: 0 auto 16px; padding: 0 16px;">
+                {% for category, message in messages %}
+                <div class="alert-box {% if category in ['error', 'danger'] %}alert-error{% else %}alert-success{% endif %}" role="alert">
+                    <span>{% if category in ['error', 'danger'] %}⚠️{% else %}✓{% endif %}</span>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Global Application Footer -->
+    <footer class="app-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-logo">🔍 Finder's Central</div>
+                <p class="footer-tagline">Reconnecting campus students with their belongings quickly, securely, and seamlessly.</p>
+            </div>
+            <div class="footer-meta">
+                <p class="footer-contact">
+                    Need support? <a href="mailto:finders.central@gmail.com" class="footer-link">finders.central@gmail.com</a>
+                </p>
+                <p class="footer-copy">© 2026 Finder's Central. Built for Campus Community.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Global Explain Match Modal -->
+    <div id="explainModal" class="contact-modal" aria-hidden="true" role="dialog">
+        <div class="contact-modal-content" style="max-width: 520px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 id="explainModalTitle" style="margin: 0; font-size: 1.25rem; color: var(--text-primary); font-family: 'Outfit', sans-serif;">Why this might be a match</h3>
+                <button onclick="closeExplainModal()" class="cancel-btn" style="padding: 4px 10px; font-size: 0.85rem;">✕</button>
+            </div>
+            <div id="explainModalBody">
+                <!-- Dynamically populated by renderExplainContent -->
+            </div>
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                <button onclick="closeExplainModal()" class="btn-secondary" style="padding: 8px 18px; font-size: 0.85rem;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Script -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

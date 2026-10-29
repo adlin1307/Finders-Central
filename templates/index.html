@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Finder's Central — Campus Lost & Found{% endblock %}
+
+{% block content %}
+<div class="hero-container">
+    <div class="hero-pill">
+        <span>✨</span> Campus Lost & Found Hub
+    </div>
+    <h1 class="hero-title">
+        Reconnect with your <span>belongings</span> faster & smarter.
+    </h1>
+    <p class="hero-subtitle">
+        Finder's Central is the dedicated platform for our campus community to report lost items, log found belongings, and securely return items to their rightful owners.
+    </p>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('login') }}" class="btn-primary">
+            <span>👤</span> Login as Student
+        </a>
+        <a href="{{ url_for('guest') }}" class="btn-secondary">
+            <span>👀</span> Enter as Guest
+        </a>
+    </div>
+</div>
+{% endblock %}

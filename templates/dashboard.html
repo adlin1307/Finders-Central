@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="hero-container" style="padding-top: 20px; padding-bottom: 24px;">
+    <div class="hero-pill">
+        <span>👋</span> Welcome, {{ user if user != "Guest" else "Guest Explorer" }}
+    </div>
+    <h1 class="hero-title" style="font-size: clamp(2rem, 4vw, 2.7rem); margin-bottom: 12px;">
+        Campus <span>Lost & Found</span> Overview
+    </h1>
+    <p class="hero-subtitle" style="margin-bottom: 24px;">
+        Real-time metrics, active listings, and community reunion statistics across campus.
+    </p>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('report') }}" class="btn-primary">
+            <span>➕</span> Report an Item
+        </a>
+        <a href="{{ url_for('matches') }}" class="btn-secondary">
+            <span>🤝</span> See Matches
+        </a>
+        <a href="{{ url_for('reports') }}" class="btn-secondary">
+            <span>🔍</span> Browse All Reports
+        </a>
+        {% if user != "Guest" %}
+        <a href="{{ url_for('my_reports') }}" class="btn-secondary">
+            <span>📋</span> My Reports
+        </a>
+        {% elif session.get('claimed_reports') %}
+        <a href="{{ url_for('guest_my_reports') }}" class="btn-secondary">
+            <span>📋</span> My Guest Reports
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Statistics Cards Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-label">Total Reports Logged</span>
+            <span class="stat-icon">📦</span>
+        </div>
+        <div class="stat-value">{{ total_reports }}</div>
+        <div class="stat-label" style="font-size: 0.8rem; color: var(--text-muted);">Lost & found items recorded</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-label">Items Reunited</span>
+            <span class="stat-icon">🎉</span>
+        </div>
+        <div class="stat-value" style="color: var(--status-returned-text);">{{ returned_items }}</div>
+        <div class="stat-label" style="font-size: 0.8rem; color: var(--text-muted);">Successfully returned to owners</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-label">Campus Recovery Rate</span>
+            <span class="stat-icon">📈</span>
+        </div>
+        <div class="stat-value" style="color: var(--primary);">{{ recovery_rate }}%</div>
+        <div class="stat-label" style="font-size: 0.8rem; color: var(--text-muted);">Reunion success percentage</div>
+    </div>
+</div>
+
+<!-- Recently Resolved Section -->
+<div class="dashboard-section">
+    <div class="section-header">
+        <h2>⭐️ Recently Reunited Items</h2>
+        <a href="{{ url_for('reports') }}" class="btn-link" style="font-size: 0.88rem; font-weight: 600;">View In All Reports →</a>
+    </div>
+
+    {% if recent_returns %}
+    <div class="activity-list">
+        {% for item in recent_returns %}
+        <div class="activity-item">
+            <span class="activity-check">✓</span>
+            <span style="color: var(--text-primary); font-weight: 600;">{{ item[0] }}</span>
+            <span style="margin-left: auto; font-size: 0.82rem; color: var(--status-returned-text); background: var(--status-returned-bg); padding: 3px 9px; border-radius: var(--radius-full); font-weight: 600;">
+                Returned to Owner
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 24px 0;">
+        No items have been reunited yet. Reports will appear here as items are recovered 🎉
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

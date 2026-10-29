@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}See Matches — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="matches-page-container" style="max-width: 1200px; margin: 0 auto; padding: 20px 16px;">
+    <!-- Page Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: var(--primary-subtle); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                🤝
+            </div>
+            <div>
+                <h1 style="font-size: 1.6rem; margin: 0; color: var(--text-primary); font-family: 'Outfit', sans-serif;">
+                    Possible Matches
+                </h1>
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 3px 0 0;">
+                    Personalized candidate matches for items you have reported on campus.
+                </p>
+            </div>
+        </div>
+
+        {% if user_has_reports and personalized_matches %}
+        <span style="font-size: 0.82rem; background: var(--primary-subtle); color: var(--primary); padding: 5px 14px; border-radius: var(--radius-full); font-weight: 700; border: 1px solid var(--primary-border);">
+            {{ personalized_matches|length }} Possible Matches
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- Match Interest / Connection Request Modal -->
+    <div id="connectModal" class="contact-modal" aria-hidden="true" role="dialog">
+        <div class="contact-modal-content" style="max-width: 520px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 id="connectModalTitle" style="margin: 0; font-size: 1.25rem;">🤝 Request Match Connection</h3>
+                <button onclick="closeConnectModal()" class="cancel-btn" style="padding: 4px 10px; font-size: 0.85rem;">✕</button>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 10px;">
+                Express interest in <strong id="connectTargetName" style="color: var(--text-primary);">this item</strong>. The recipient can review your note and safely coordinate handover.
+            </p>
+            <div style="background: var(--primary-subtle); border-left: 3px solid var(--primary); padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 14px; font-size: 0.82rem; color: var(--text-primary);">
+                ℹ️ <strong>On-Platform Request:</strong> This sends a connection request directly inside Finder's Central (not an email). The other party can view and respond on their reports page.
+            </div>
+
+            <form method="POST" action="{{ url_for('request_connection') }}" id="connectForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="connectTargetId" name="target_report_id" value="{{ connect_form_data.target_report_id if connect_form_data else '' }}">
+                <input type="hidden" id="connectTargetType" value="">
+
+                {% if is_student %}
+                    <!-- Student Mode: choose an owned report -->
+                    {% if user_active_reports %}
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" for="studentSourceReport">Your Matching Report</label>
+                        <select id="studentSourceReport" name="source_report_id" required style="width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-surface-subtle); color: var(--text-primary); font-size: 0.88rem;">
+                            <option value="">-- Select one of your active reports --</option>
+                            {% for ur in user_active_reports %}
+                            <option value="{{ ur[0] }}" data-type="{{ ur[1] }}" {% if connect_form_data and connect_form_data.source_report_id|string == ur[0]|string %}selected{% endif %}>
+                                {{ ur[1] }}: {{ ur[2].title() }} ({{ ur[3] }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <div class="alert-box alert-error" style="margin-bottom: 14px; font-size: 0.85rem;">
+                        You do not have any active reports. <a href="{{ url_for('report') }}" style="font-weight: 700; text-decoration: underline;">Submit a report first</a> so ownership can be verified!
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <!-- Guest Mode: choose session claimed report OR enter claim token -->
+                    {% if user_active_reports %}
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" for="guestSourceReport">Your Matching Report (from this session)</label>
+                        <select id="guestSourceReport" name="source_report_id" style="width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-surface-subtle); color: var(--text-primary); font-size: 0.88rem;">
+                            <option value="">-- Select from your session reports --</option>
+                            {% for ur in user_active_reports %}
+                            <option value="{{ ur[0] }}" data-type="{{ ur[1] }}" {% if connect_form_data and connect_form_data.source_report_id|string == ur[0]|string %}selected{% endif %}>
+                                {{ ur[1] }}: {{ ur[2].title() }} ({{ ur[3] }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">— OR ENTER YOUR CLAIM TOKEN BELOW —</div>
+                    {% endif %}
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" for="guestClaimToken">Guest Report Claim Token or Link</label>
+                        <input
+                            type="text"
+                            id="guestClaimToken"
+                            name="claim_token"
+                            value="{{ connect_form_data.claim_token if connect_form_data else '' }}"
+                            placeholder="Paste your 32-character guest claim token or claim URL..."
+                            style="width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-surface-subtle); color: var(--text-primary); font-size: 0.85rem;"
+                        >
+                        <small style="color: var(--text-muted); font-size: 0.78rem; display: block; margin-top: 4px;">
+                            Verifies you own a matching lost or found report without requiring student login.
+                        </small>
+                    </div>
+                {% endif %}
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label" id="connectMessageLabel" for="connectMessage">Identifying Clue / Verification Message</label>
+                    <textarea
+                        id="connectMessage"
+                        name="message"
+                        rows="3"
+                        placeholder="Describe specific identifying marks, colors, contents, or circumstances to verify ownership safely..."
+                        required
+                        style="width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-surface-subtle); color: var(--text-primary); font-size: 0.88rem; font-family: inherit; resize: vertical;"
+                    >{{ connect_form_data.message if connect_form_data else '' }}</textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" for="connectContact">Your Contact Information (Shared ONLY if accepted)</label>
+                    <input
+                        type="text"
+                        id="connectContact"
+                        name="contact_info"
+                        value="{{ connect_form_data.contact_info if connect_form_data else '' }}"
+                        placeholder="e.g. Phone number or email for handover coordination"
+                        style="width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-surface-subtle); color: var(--text-primary); font-size: 0.88rem;"
+                    >
+                </div>
+
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button type="button" onclick="closeConnectModal()" class="btn-secondary" style="padding: 9px 16px; font-size: 0.88rem;">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-primary" style="padding: 9px 20px; font-size: 0.88rem;">
+                        Send Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT LOGIC -->
+    {% if not user_has_reports %}
+    <!-- Empty State: User has no active reports -->
+    <div class="empty-state-box" style="text-align: center; padding: 48px 20px; background: var(--bg-surface); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); max-width: 600px; margin: 40px auto; box-shadow: var(--shadow-sm);">
+        <div style="font-size: 3rem; margin-bottom: 12px;">🔍</div>
+        <h2 style="font-size: 1.35rem; margin-bottom: 8px; color: var(--text-primary); font-family: 'Outfit', sans-serif;">
+            No matches yet!
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 8px; line-height: 1.5;">
+            We'll show possible matches here when something similar is reported.
+        </p>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+            Lost something or found an item? Add a report to get started.
+        </p>
+        <a href="{{ url_for('report') }}" class="btn-primary" style="padding: 10px 24px; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <span>➕</span> Report an Item
+        </a>
+    </div>
+
+    {% elif not personalized_matches %}
+    <!-- Empty State: User has active reports, but no matches yet -->
+    <div class="empty-state-box" style="text-align: center; padding: 48px 20px; background: var(--bg-surface); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); max-width: 620px; margin: 40px auto; box-shadow: var(--shadow-sm);">
+        <div style="font-size: 3rem; margin-bottom: 12px;">👀</div>
+        <h2 style="font-size: 1.35rem; margin-bottom: 8px; color: var(--text-primary); font-family: 'Outfit', sans-serif;">
+            No matches yet!
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 14px; line-height: 1.5;">
+            We'll show possible matches here when something similar is reported.
+        </p>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 14px;">
+            We're actively monitoring campus listings for your active reports:
+        </p>
+        <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;">
+            {% for ur in user_active_reports %}
+            <span style="font-size: 0.8rem; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); padding: 5px 12px; border-radius: var(--radius-full); color: var(--text-primary);">
+                {{ ur[1] }}: <strong>{{ ur[2].title() }}</strong> ({{ ur[3] }})
+            </span>
+            {% endfor %}
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <a href="{{ url_for('report') }}" class="btn-secondary" style="padding: 9px 18px; font-size: 0.85rem; text-decoration: none;">
+                Report Another Item
+            </a>
+            <a href="{{ url_for('reports') }}" class="btn-primary" style="padding: 9px 20px; font-size: 0.85rem; text-decoration: none;">
+                Browse All Reports
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Personalized Matches Grid -->
+    <div class="matches-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+        {% for sm in personalized_matches %}
+        <div class="match-card-box" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-sm);">
+            <div>
+                <!-- Top Badge Row -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 6px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--primary); background: var(--primary-subtle); padding: 3px 10px; border-radius: var(--radius-full); border: 1px solid var(--primary-border);">
+                        Possible Match
+                    </span>
+                    <span style="font-size: 0.8rem; background: var(--primary-subtle); color: var(--primary); font-weight: 700; padding: 3px 10px; border-radius: var(--radius-full); border: 1px solid var(--primary-border);">
+                        Match score: {{ sm.score_pct }}
+                    </span>
+                </div>
+
+                <!-- Your Item Box -->
+                <div style="background: var(--bg-surface-subtle); border-left: 3px solid var(--primary); padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 10px;">
+                    <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">
+                        {% if sm.user_item_type == 'Lost Item' %}Your lost item{% else %}Your found item{% endif %}
+                    </div>
+                    <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary);">
+                        {{ sm.user_item_title }}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                        Category: {{ sm.user_report[3] }} • 📍 {{ sm.user_report[5] or 'Campus' }}
+                    </div>
+                </div>
+
+                <!-- Possible Match Box -->
+                <div style="background: var(--bg-surface-subtle); border-left: 3px solid var(--status-found-text); padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 12px;">
+                    <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">
+                        Possible match
+                    </div>
+                    <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary);">
+                        {{ sm.candidate_item_title }}
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0 2px;">
+                        {% if sm.user_item_type == 'Lost Item' %}
+                        Someone reported finding a {{ sm.candidate_item_title|lower }} near {{ sm.candidate_report[5] or 'campus' }}.
+                        {% else %}
+                        Someone may be looking for an item like this (reported lost near {{ sm.candidate_report[5] or 'campus' }}).
+                        {% endif %}
+                    </p>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                        Reported by: {{ sm.candidate_report[10]|reporter_label(sm.candidate_report[14]) }}
+                    </div>
+                </div>
+
+                <!-- Short Natural Explanation -->
+                <p class="match-short-explanation" style="font-size: 0.88rem; color: var(--text-secondary); margin: 10px 0 12px; line-height: 1.45;">
+                    {{ sm.explanation.summary_sentence }}
+                </p>
+
+                <!-- Contradiction alerts if any -->
+                {% if sm.explanation.contradictions %}
+                <div style="background: var(--status-lost-bg); border-left: 3px solid var(--status-lost-text); padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 0.82rem; color: var(--status-lost-text);">
+                    {% for contra in sm.explanation.contradictions %}
+                    <div>⚠️ {{ contra }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Expandable Match Analysis Dropdown -->
+                <details class="match-analysis-dropdown" style="margin-bottom: 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); overflow: hidden;">
+                    <summary class="match-analysis-summary" style="padding: 10px 14px; font-size: 0.84rem; font-weight: 600; color: var(--text-primary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;">
+                        <span>Show Match Analysis</span>
+                        <i class="fas fa-chevron-down dropdown-chevron" aria-hidden="true" style="font-size: 0.78rem; color: var(--text-muted); transition: transform 0.2s ease;"></i>
+                    </summary>
+                    <div class="match-analysis-body" style="padding: 12px 14px; border-top: 1px solid var(--border-subtle); font-size: 0.82rem; background: var(--bg-surface);">
+                        <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+                            Score Component Breakdown:
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            {% for comp in sm.explanation.components %}
+                            <div class="match-component-row" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-radius: var(--radius-sm); background: var(--bg-surface-subtle); flex-wrap: wrap; gap: 4px;">
+                                <div>
+                                    <strong style="color: var(--text-primary);">{{ comp.name }}:</strong>
+                                    <span style="color: {% if comp.status == 'match' or comp.status == 'clean' %}var(--status-found-text){% elif comp.status == 'conflict' %}var(--status-lost-text){% else %}var(--text-secondary){% endif %}; font-weight: 500; margin-left: 4px;">
+                                        {{ comp.similarity }}
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                                    <span>({{ comp.weight }})</span>
+                                    <strong style="color: {% if comp.status == 'match' %}var(--primary){% elif comp.status == 'conflict' %}var(--status-lost-text){% else %}var(--text-muted){% endif %};">
+                                        {{ comp.contribution }}
+                                    </strong>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% if sm.explanation.verification_clues %}
+                        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-subtle);">
+                            <div style="font-weight: 700; font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">
+                                🔍 What to Check:
+                            </div>
+                            <ul style="margin: 0; padding-left: 18px; color: var(--text-secondary); line-height: 1.45; font-size: 0.8rem;">
+                                {% for clue in sm.explanation.verification_clues %}
+                                <li>{{ clue }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <div style="margin-top: 10px; font-size: 0.76rem; color: var(--text-muted); line-height: 1.4; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
+                            ℹ️ {{ sm.explanation.disclaimer }}
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Actions Row -->
+            <div style="display: flex; gap: 8px; margin-top: 14px; border-top: 1px solid var(--border-subtle); padding-top: 12px; flex-wrap: wrap;">
+                <a href="{{ url_for('reports') }}#report-{{ sm.candidate_id }}" class="btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 0.82rem; text-align: center; text-decoration: none;">
+                    View Details
+                </a>
+                <button type="button" onclick="openExplainModal('{{ sm.user_id }}', '{{ sm.candidate_id }}', '{{ sm.score_pct }}')" class="btn-secondary" style="flex: 1; padding: 8px 10px; font-size: 0.82rem;">
+                    Explain Match
+                </button>
+                <button type="button" onclick="openConnectModal('{{ sm.candidate_id }}', '{{ sm.candidate_item_title|escape }}', '{{ sm.candidate_item_type|escape }}', '{{ sm.user_id }}')" class="btn-primary" style="flex: 1; padding: 8px 12px; font-size: 0.82rem; white-space: nowrap;">
+                    {% if sm.user_item_type == 'Lost Item' %}
+                    Contact Finder
+                    {% else %}
+                    Reach Out to Owner
+                    {% endif %}
+                </button>
+            </div>
+            <small style="display: block; text-align: center; font-size: 0.74rem; color: var(--text-muted); margin-top: 6px;">
+                Sends an on-platform connection request (not an email)
+            </small>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Friendly Transparency Note -->
+    <div style="margin-top: 28px; text-align: center; font-size: 0.82rem; color: var(--text-muted); background: var(--bg-surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+        ℹ️ This is only a possible match, not proof that the item is yours. Always verify private details before meeting.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

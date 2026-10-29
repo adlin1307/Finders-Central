@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Report Submitted — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="form-wrapper" style="max-width: 680px; text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 12px;">✅</div>
+    <div class="form-header" style="margin-bottom: 20px;">
+        <h1 style="font-size: 1.85rem;">Report Successfully Recorded!</h1>
+        <p>Your {{ item_type.lower() }} report has been entered into the campus matching pipeline.</p>
+    </div>
+
+    <!-- Summary Box -->
+    <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px 20px; text-align: left; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary);">
+                {{ item_type }} #{{ report_id }}
+            </span>
+            <span style="font-size: 0.8rem; background: var(--status-lost-bg); color: var(--status-lost-text); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 600;">
+                ACTIVE
+            </span>
+        </div>
+        <h3 style="margin-bottom: 4px; color: var(--text-primary); font-size: 1.2rem;">{{ item_name }}</h3>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0;"><strong>Category:</strong> {{ category }}</p>
+    </div>
+
+    <!-- Email Status Box -->
+    {% if email_sent %}
+    <div class="alert-box" style="background: var(--status-returned-bg); border-color: var(--status-returned-border); color: var(--status-returned-text); margin-bottom: 20px; text-align: left;">
+        <span>✉️</span> <div>A verification claim link has been dispatched to <strong>{{ email }}</strong>. Check your inbox to manage this report.</div>
+    </div>
+    {% else %}
+    <div class="alert-box" style="background: var(--bg-surface-subtle); border-color: var(--border-subtle); color: var(--text-secondary); margin-bottom: 20px; text-align: left;">
+        <span>ℹ️</span> <div><strong>Notice:</strong> Automated email delivery could not be completed ({{ email_status.label }}). <strong>Save your private claim link below</strong> to access, verify, or remove your report later.</div>
+    </div>
+    {% endif %}
+
+    <!-- Private Claim Link Card -->
+    <div style="background: var(--bg-surface); border: 2px solid var(--primary-border); border-radius: var(--radius-md); padding: 20px; margin-bottom: 28px; text-align: left;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 1.2rem;">🔑</span>
+            <strong style="color: var(--text-primary); font-size: 1rem;">Your Private Report Management Link</strong>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.45;">
+            Because you reported as a campus guest/visitor, you do not have a college student account. Keep this unguessable link private. It allows you to prove ownership, mark your item as returned, or delete this report.
+        </p>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input
+                type="text"
+                id="claimUrlInput"
+                value="{{ claim_url }}"
+                readonly
+                style="flex: 1; min-width: 240px; font-family: monospace; font-size: 0.82rem; background: var(--bg-surface-subtle); border: 1px solid var(--border-strong); padding: 10px 12px; border-radius: var(--radius-sm); color: var(--text-primary);"
+            >
+            <button
+                type="button"
+                id="copyClaimBtn"
+                onclick="copyTextToClipboard(document.getElementById('claimUrlInput').value, this);"
+                class="btn-secondary"
+                style="padding: 10px 16px; white-space: nowrap;"
+            >
+                📋 Copy Link
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="{{ url_for('guest_manage_report', token=claim_token) }}" class="btn-primary" style="padding: 12px 24px;">
+            <span>⚙️</span> Manage Report Now
+        </a>
+        <a href="{{ url_for('reports') }}" class="btn-secondary" style="padding: 12px 24px;">
+            <span>🔍</span> Browse All Reports
+        </a>
+    </div>
+</div>
+{% endblock %}

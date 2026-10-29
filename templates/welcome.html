@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="hero-container">
+    <div class="hero-pill">
+        <span>✨</span> Campus Lost & Found Hub
+    </div>
+    <h1 class="hero-title">
+        Reconnect with your <span>belongings</span> faster & smarter.
+    </h1>
+    <p class="hero-subtitle">
+        Finder's Central is the dedicated platform for our campus community to report lost items, log found belongings, and securely return items to their rightful owners.
+    </p>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('login') }}" class="btn-primary" id="btn-enter-student">
+            <span>👤</span> Enter as Student
+        </a>
+        <a href="{{ url_for('guest') }}" class="btn-secondary" id="btn-enter-guest">
+            <span>👀</span> Enter as Guest
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-section" style="max-width: 860px; margin: 40px auto 0;">
+    <div class="section-header">
+        <h2>How Finder's Central Works</h2>
+    </div>
+    <div class="stats-grid" style="margin: 10px 0 0;">
+        <div class="stat-card" style="box-shadow: none; background: var(--bg-surface-subtle);">
+            <div class="stat-header">
+                <span class="stat-icon">📝</span>
+            </div>
+            <div class="stat-value" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 6px;">1. Report Quickly</div>
+            <p class="stat-label">Submit a lost or found report in 30 seconds with photos, locations, and descriptions.</p>
+        </div>
+        <div class="stat-card" style="box-shadow: none; background: var(--bg-surface-subtle);">
+            <div class="stat-header">
+                <span class="stat-icon">⚡️</span>
+            </div>
+            <div class="stat-value" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 6px;">2. Smart Matching</div>
+            <p class="stat-label">Automatic notifications alert finders and owners whenever potential item matches are reported.</p>
+        </div>
+        <div class="stat-card" style="box-shadow: none; background: var(--bg-surface-subtle);">
+            <div class="stat-header">
+                <span class="stat-icon">🤝</span>
+            </div>
+            <div class="stat-value" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 6px;">3. Safe Recovery</div>
+            <p class="stat-label">Protected identity documents and verified student channels ensure secure reunions.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

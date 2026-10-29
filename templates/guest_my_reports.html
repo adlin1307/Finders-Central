@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}My Guest Reports — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="hero-container" style="padding-top: 10px; padding-bottom: 24px;">
+    <h1 class="hero-title" style="font-size: clamp(2rem, 4vw, 2.6rem); margin-bottom: 8px;">
+        My <span>Guest Reports</span>
+    </h1>
+    <p class="hero-subtitle" style="margin-bottom: 12px;">
+        Manage the lost or found reports you have submitted or claimed as a campus visitor.
+    </p>
+    <div
+        style="display: inline-flex; gap: 8px; font-size: 0.88rem; font-weight: 600; background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 6px 16px; border-radius: var(--radius-full);">
+        <span style="color: var(--primary);">{{ active_count }} Active</span>
+        <span style="color: var(--border-strong);">•</span>
+        <span style="color: var(--status-returned-text);">{{ returned_count }} Reunited</span>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert-box alert-error" style="max-width: 680px; margin: 0 auto 24px;">
+    <span>⚠️</span> {{ error }}
+</div>
+{% endif %}
+
+<!-- Claim Token Lookup Box -->
+<div
+    style="max-width: 680px; margin: 0 auto 36px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <span style="font-size: 1.2rem;">🔑</span>
+        <strong style="color: var(--text-primary); font-size: 1rem;">Claim Existing Report</strong>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
+        Returning on a new browser? Paste your private claim token or claim URL below to manage your report in this
+        session.
+    </p>
+
+    <form method="POST" action="{{ url_for('guest_claim_token_input') }}"
+        style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="claim_token" placeholder="Paste your claim token or claim link here..." required
+            style="flex: 1; min-width: 240px; font-size: 0.88rem; background: var(--bg-surface-subtle); border: 1px solid var(--border-strong); padding: 10px 14px; border-radius: var(--radius-sm); color: var(--text-primary);">
+        <button type="submit" class="btn-primary" style="padding: 10px 18px; white-space: nowrap;">
+            Access Report
+        </button>
+    </form>
+</div>
+
+<!-- SECTION 1: ACTIVE REPORTS -->
+<h2 class="reports-section-title">
+    <span>📌</span> Active Guest Reports
+</h2>
+
+{% if active_reports %}
+<div class="reports-grid">
+    {% for report in active_reports %}
+    <div id="report-{{ report[0] }}" class="report-card">
+        {% if report[11] %}
+        <div class="card-media">
+            {% if report[3] == "ID Cards" %}
+            <div class="protected-doc-badge">
+                <span style="font-size: 1.5rem;">🔒</span>
+                <strong>Protected Identity Document</strong>
+                <p>Visible to verified owner only.</p>
+            </div>
+            {% else %}
+            <a href="{{ url_for('static', filename='uploads/' + report[11]) }}" target="_blank" title="View Full Photo">
+                <img src="{{ url_for('static', filename='uploads/' + report[11]) }}" class="report-thumb"
+                    alt="{{ report[2] }}">
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="card-body">
+            <div class="card-header-row">
+                <span class="category-tag">{{ report[3] }}</span>
+                {% if report[1] == "Lost Item" %}
+                <span class="status-badge status-searching">SEARCHING</span>
+                {% else %}
+                <span class="status-badge status-found">FOUND</span>
+                {% endif %}
+            </div>
+
+            <h3 class="card-title">{{ report[2].title() }}</h3>
+            <p class="card-desc">{{ report[4] }}</p>
+
+            <div class="card-meta-list">
+                <div class="meta-row">
+                    <span class="meta-icon">📍</span>
+                    <span class="meta-label">Location:</span>
+                    <span class="meta-val">{{ report[5] }}</span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-icon">🕒</span>
+                    <span class="meta-label">Submitted:</span>
+                    <span class="meta-val">{{ report[9] }}</span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-icon">📞</span>
+                    <span class="meta-label">Contact:</span>
+                    <span class="meta-val">{{ report[6] }}</span>
+                </div>
+            </div>
+
+            <div class="card-actions" style="display: flex; gap: 8px;">
+                <form method="POST" action="{{ url_for('mark_returned', report_id=report[0]) }}" style="flex: 1;"
+                    onsubmit="return confirm('Confirm that this item has been successfully reunited?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="return-btn" style="width: 100%;">
+                        {% if report[1] == "Lost Item" %}Got Item Back{% else %}Item Returned{% endif %}
+                    </button>
+                </form>
+
+                <form method="POST" action="{{ url_for('delete_report', report_id=report[0]) }}" style="flex: 1;"
+                    onsubmit="return confirm('Are you sure you want to permanently delete this report?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="delete-btn" style="width: 100%;">
+                        Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="dashboard-section" style="text-align: center; padding: 36px 20px; max-width: 680px; margin: 0 auto 30px;">
+    <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 16px;">
+        You have no active guest reports in this browser session.
+    </p>
+    <a href="{{ url_for('report') }}" class="btn-primary">
+        <span>➕</span> Submit a Lost or Found Report
+    </a>
+</div>
+{% endif %}
+
+<!-- SECTION 2: RETURNED / RESOLVED REPORTS -->
+{% if returned_reports %}
+<h2 class="reports-section-title" style="color: var(--status-returned-text); margin-top: 50px;">
+    <span>🎉</span> Reunited Items History
+</h2>
+<div class="reports-grid">
+    {% for report in returned_reports %}
+    <div id="report-{{ report[0] }}" class="report-card" style="border-color: var(--status-returned-border);">
+        <div class="card-body">
+            <div class="card-header-row">
+                <span class="category-tag">{{ report[3] }}</span>
+                <span class="status-badge status-returned">RETURNED</span>
+            </div>
+
+            <h3 class="card-title">{{ report[2].title() }}</h3>
+            <p class="card-desc">{{ report[4] }}</p>
+
+            <div class="card-meta-list">
+                <div class="meta-row">
+                    <span class="meta-icon">📍</span>
+                    <span class="meta-label">Location:</span>
+                    <span class="meta-val">{{ report[5] }}</span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-icon">🕒</span>
+                    <span class="meta-label">Closed:</span>
+                    <span class="meta-val">{{ report[9] }}</span>
+                </div>
+            </div>
+
+            <div class="card-actions">
+                <form method="POST" action="{{ url_for('delete_report', report_id=report[0]) }}" style="width: 100%;"
+                    onsubmit="return confirm('Remove this resolved report from your history?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="delete-btn" style="width: 100%;">
+                        Remove from History
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- SECTION 3: CONNECTION REQUESTS -->
+{% if incoming_requests or outgoing_requests %}
+<h2 class="reports-section-title" style="margin-top: 50px;">
+    <span>🤝</span> Session Connection Requests
+</h2>
+
+<div
+    style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+    ℹ️ Direct on-platform status tracking for your claimed reports in this browser session.
+</div>
+
+{% if incoming_requests %}
+<h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 12px;">
+    📥 Incoming Requests for Your Items
+</h3>
+<div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+    {% for req in incoming_requests %}
+    <div
+        style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: var(--text-primary);">
+                Regarding your {{ req[15] }}: {{ req[14].title() }}
+            </strong>
+            <div>
+                {% if req[4] == 'pending' %}
+                <span
+                    style="font-size: 0.75rem; background: var(--status-lost-bg); color: var(--status-lost-text); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;">
+                    PENDING REVIEW
+                </span>
+                {% elif req[4] == 'accepted' %}
+                <span
+                    style="font-size: 0.75rem; background: var(--status-returned-bg); color: var(--status-returned-text); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;">
+                    ACCEPTED
+                </span>
+                {% else %}
+                <span
+                    style="font-size: 0.75rem; background: var(--bg-surface-subtle); color: var(--text-muted); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;">
+                    DECLINED
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div
+            style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span>Requester Item: {{ req[10].title() }} ({{ req[11] }}) • 📍 {{ req[13] }}</span>
+            <button type="button" onclick="openExplainModal('{{ req[1] }}', '{{ req[2] }}')" class="btn-secondary"
+                style="padding: 4px 10px; font-size: 0.78rem;">
+                🤖 AI Match Analysis & Clues
+            </button>
+        </div>
+        <div
+            style="background: var(--bg-surface-subtle); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px;">
+            Verification Clue: "{{ req[5] }}"
+        </div>
+        {% if req[4] == 'pending' %}
+        <form method="POST" action="{{ url_for('guest_accept_connection_request', req_id=req[0]) }}"
+            style="display: flex; flex-direction: column; gap: 6px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">
+                Coordination Note / Return Instructions (Shared with Requester upon acceptance):
+            </label>
+            <input type="text" name="response_note"
+                placeholder="Coordination note (e.g. Meet at Campus Security Desk tomorrow at 11 AM)..." required
+                style="width: 100%; padding: 8px 10px; font-size: 0.85rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); color: var(--text-primary);">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; flex-wrap: wrap; gap: 8px;">
+                <span style="font-size: 0.78rem; color: var(--text-muted);">
+                    🔒 Both parties' contact details will be revealed only after you accept.
+                </span>
+                <button type="submit" class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem;">
+                    ✓ Accept & Share Contact
+                </button>
+            </div>
+        </form>
+        <form method="POST" action="{{ url_for('guest_decline_connection_request', req_id=req[0]) }}"
+            onsubmit="return confirm('Decline this connection request?')"
+            style="display: flex; justify-content: flex-end; margin-top: 4px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="cancel-btn" style="padding: 4px 10px; font-size: 0.8rem;">
+                ✕ Decline Request
+            </button>
+        </form>
+        {% elif req[4] == 'accepted' %}
+        <div
+            style="background: var(--status-returned-bg); border: 1px solid var(--status-returned-border); border-radius: var(--radius-sm); padding: 12px; margin-top: 8px;">
+            <div style="font-size: 0.9rem; font-weight: 700; color: var(--status-returned-text); margin-bottom: 4px;">
+                🎉 Connection accepted! Contact details are now available to both of you.
+            </div>
+            <div style="font-size: 0.78rem; color: var(--status-returned-text); margin-bottom: 6px; font-weight: 500;">
+                Connection accepted! You can now coordinate the return securely.
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-primary); margin-bottom: 8px;">
+                <strong>Your Return Note Sent to Requester:</strong>
+                <p style="margin: 2px 0 0; font-style: italic; color: var(--text-secondary);">"{{ req[6] }}"</p>
+            </div>
+
+            <div
+                style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px;">
+                <strong style="font-size: 0.82rem; color: var(--text-primary); display: block; margin-bottom: 4px;">
+                    📞 Requester Contact Details (Revealed for Return Coordination):
+                </strong>
+                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>📱 <strong>Phone:</strong>
+                            {% if req[16] %}
+                            <a href="tel:{{ req[16] }}" style="color: var(--primary); font-weight: 600;">{{ req[16]
+                                }}</a>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-style: italic;">Not provided</span>
+                            {% endif %}
+                        </span>
+                        {% if req[16] %}
+                        <button type="button" onclick="copyTextToClipboard('{{ req[16] }}', this)" class="btn-secondary"
+                            style="padding: 1px 6px; font-size: 0.72rem;">Copy</button>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>✉️ <strong>Email:</strong>
+                            {% if req[17] %}
+                            <a href="mailto:{{ req[17] }}" style="color: var(--primary); font-weight: 600;">{{ req[17]
+                                }}</a>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-style: italic;">Not provided</span>
+                            {% endif %}
+                        </span>
+                        {% if req[17] %}
+                        <button type="button" onclick="copyTextToClipboard('{{ req[17] }}', this)" class="btn-secondary"
+                            style="padding: 1px 6px; font-size: 0.72rem;">Copy</button>
+                        {% endif %}
+                    </div>
+                    {% if req[7] %}
+                    <div>
+                        <span>💬 <strong>Additional Contact Note:</strong> <span style="color: var(--text-primary);">{{
+                                req[7] }}</span></span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% elif req[4] == 'declined' %}
+        <div
+            style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 8px; font-size: 0.82rem; color: var(--text-muted);">
+            ✕ Request declined. Contact details remain strictly withheld.
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if outgoing_requests %}
+<h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 12px;">
+    📤 Outgoing Requests Sent
+</h3>
+<div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+    {% for req in outgoing_requests %}
+    <div
+        style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+            <strong style="color: var(--text-primary); font-size: 0.95rem;">
+                Target: {{ req[12].title() }} ({{ req[13] }})
+            </strong>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" onclick="openExplainModal('{{ req[1] }}', '{{ req[2] }}')" class="btn-secondary"
+                    style="padding: 2px 8px; font-size: 0.75rem;">
+                    💡 Explain
+                </button>
+                {% if req[4] == 'pending' %}
+                <span
+                    style="font-size: 0.75rem; background: var(--status-lost-bg); color: var(--status-lost-text); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;">
+                    PENDING RECIPIENT
+                </span>
+                {% elif req[4] == 'accepted' %}
+                <span
+                    style="font-size: 0.75rem; background: var(--status-returned-bg); color: var(--status-returned-text); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;">
+                    ACCEPTED!
+                </span>
+                {% else %}
+                <span
+                    style="font-size: 0.75rem; background: var(--bg-surface-subtle); color: var(--text-muted); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 700;">
+                    DECLINED
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 4px;">
+            Verification clue: "{{ req[5] }}"
+        </p>
+        {% if req[4] == 'accepted' %}
+        <div
+            style="background: var(--status-returned-bg); border: 1px solid var(--status-returned-border); border-radius: var(--radius-sm); padding: 12px; font-size: 0.82rem; color: var(--status-returned-text);">
+            <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 6px;">
+                🎉 Connection Accepted! You can now coordinate the return securely.
+            </div>
+            <div style="color: var(--text-primary); margin-bottom: 8px;">
+                <strong>Coordination Instructions from Recipient:</strong>
+                <p style="margin: 2px 0 0; font-style: italic; color: var(--text-secondary);">"{{ req[6] }}"</p>
+            </div>
+
+            <div
+                style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px;">
+                <strong style="font-size: 0.82rem; color: var(--text-primary); display: block; margin-bottom: 4px;">
+                    📞 Recipient Contact Details (Revealed for Return Coordination):
+                </strong>
+                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>📱 <strong>Phone:</strong>
+                            {% if req[15] %}
+                            <a href="tel:{{ req[15] }}" style="color: var(--primary); font-weight: 600;">{{ req[15]
+                                }}</a>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-style: italic;">Not provided</span>
+                            {% endif %}
+                        </span>
+                        {% if req[15] %}
+                        <button type="button" onclick="copyTextToClipboard('{{ req[15] }}', this)" class="btn-secondary"
+                            style="padding: 1px 6px; font-size: 0.72rem;">Copy</button>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>✉️ <strong>Email:</strong>
+                            {% if req[16] %}
+                            <a href="mailto:{{ req[16] }}" style="color: var(--primary); font-weight: 600;">{{ req[16]
+                                }}</a>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-style: italic;">Not provided</span>
+                            {% endif %}
+                        </span>
+                        {% if req[16] %}
+                        <button type="button" onclick="copyTextToClipboard('{{ req[16] }}', this)" class="btn-secondary"
+                            style="padding: 1px 6px; font-size: 0.72rem;">Copy</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% elif req[4] == 'pending' %}
+        <div
+            style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.8rem; color: var(--text-secondary);">
+            ⏳ <strong>Pending Review:</strong> The recipient is reviewing your verification clue. Once they accept,
+            their return instructions and contact details will appear here.
+        </div>
+        {% elif req[4] == 'declined' %}
+        <div
+            style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.8rem; color: var(--text-muted);">
+            ✕ This connection request was declined by the recipient. Contact details are not shared.
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

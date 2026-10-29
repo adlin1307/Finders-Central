@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Possible Matches Found — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="match-card" style="max-width: 720px;">
+    <div class="match-icon">🎉</div>
+    <h1 style="font-size: 1.8rem; margin-bottom: 8px;">Plausible Matches Detected!</h1>
+    <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 20px;">
+        We analyzed active campus reports across all students and visitors using multi-attribute scoring and found potential matches.
+    </p>
+
+    <!-- Guest Claim Link Banner if submitter is a guest -->
+    {% if is_guest and claim_url %}
+    <div style="background: var(--bg-surface); border: 2px solid var(--primary-border); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 24px; text-align: left;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span style="font-size: 1.1rem;">🔑</span>
+            <strong style="color: var(--text-primary); font-size: 0.95rem;">Save Your Guest Report Claim Link</strong>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 10px;">
+            Your report is active. Copy and save this private link to verify, track, or remove your report later:
+        </p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input
+                type="text"
+                id="claimUrlInputMatch"
+                value="{{ claim_url }}"
+                readonly
+                style="flex: 1; min-width: 220px; font-family: monospace; font-size: 0.8rem; background: var(--bg-surface-subtle); border: 1px solid var(--border-strong); padding: 8px 12px; border-radius: var(--radius-sm); color: var(--text-primary);"
+            >
+            <button
+                type="button"
+                onclick="copyTextToClipboard(document.getElementById('claimUrlInputMatch').value, this);"
+                class="btn-secondary"
+                style="padding: 8px 14px; font-size: 0.82rem;"
+            >
+                📋 Copy
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Matches List -->
+    {% if matches %}
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+        {% for m in matches %}
+        {% set rep = m.report %}
+        <div class="match-details-box" style="text-align: left; margin: 0; border: 1px solid var(--border-subtle);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700;">
+                    {{ rep[1] }} #{{ rep[0] }}
+                </span>
+                <span style="font-size: 0.8rem; background: var(--primary-subtle); color: var(--primary); padding: 3px 10px; border-radius: var(--radius-full); font-weight: 700; border: 1px solid var(--primary-border);">
+                    🎯 Match score: {{ m.score_pct }}
+                </span>
+            </div>
+
+            {% if rep[11] %}
+            <div style="text-align: center; margin-bottom: 12px;">
+                {% if rep[3] == "ID Cards" %}
+                <div class="protected-doc-badge">
+                    <span style="font-size: 1.5rem;">🔒</span>
+                    <strong>Protected Identity Document</strong>
+                    <p>Hidden to protect student privacy.</p>
+                </div>
+                {% else %}
+                <img
+                    src="{{ url_for('static', filename='uploads/' + rep[11]) }}"
+                    class="preview-img"
+                    alt="{{ rep[2] }}"
+                    style="max-height: 180px; object-fit: contain;"
+                >
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <h2 style="font-size: 1.25rem; color: var(--text-primary); margin-bottom: 6px;">{{ rep[2].title() }}</h2>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Category:</strong> {{ rep[3] }}</p>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Description:</strong> {{ rep[4] }}</p>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 8px;"><strong>Location:</strong> 📍 {{ rep[5] }}</p>
+            
+            <div style="display: flex; gap: 14px; font-size: 0.85rem; color: var(--text-muted); margin-top: 10px; flex-wrap: wrap;">
+                <span>👤 {{ rep[10]|reporter_label(rep[14]) }}</span>
+                <span>📞 {{ rep[6]|mask_phone }}</span>
+                <span>✉️ {{ rep[7]|mask_email }}</span>
+                <span>🕒 {{ rep[9] }}</span>
+            </div>
+
+            {% if m.explanation %}
+            <!-- Explain Match Details -->
+            <div style="margin-top: 14px; background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px;">
+                <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 0.88rem; color: var(--text-primary);">Why this might match:</strong>
+                </div>
+
+                {% if m.explanation.matching_attributes %}
+                <ul style="margin: 0 0 8px; padding-left: 18px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">
+                    {% for attr in m.explanation.matching_attributes %}
+                    <li>• {{ attr }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if m.explanation.contradictions %}
+                <div style="background: var(--status-lost-bg); border-left: 3px solid var(--status-lost-text); padding: 6px 10px; border-radius: var(--radius-sm); margin-bottom: 8px; font-size: 0.8rem; color: var(--status-lost-text);">
+                    <strong>⚠️ Please note:</strong>
+                    <ul style="margin: 2px 0 0; padding-left: 16px;">
+                        {% for contra in m.explanation.contradictions %}
+                        <li>{{ contra }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div style="margin-top: 6px;">
+                    <strong style="font-size: 0.82rem; color: var(--text-primary); display: block; margin-bottom: 2px;">
+                        🔍 What to check:
+                    </strong>
+                    <ul style="margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
+                        {% for clue in m.explanation.verification_clues %}
+                        <li>{{ clue }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div style="margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); border-top: 1px dashed var(--border-subtle); padding-top: 6px;">
+                    {{ m.explanation.disclaimer }}
+                </div>
+            </div>
+            {% endif %}
+
+            <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">
+                    Not proof of ownership • Verified before return
+                </span>
+                <a href="{{ url_for('reports') }}?highlight={{ rep[0] }}#report-{{ rep[0] }}" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">
+                    View in All Reports →
+                </a>
+            </div>
+
+            {% if new_report_id %}
+            <details style="margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+                <summary style="font-size: 0.85rem; font-weight: 600; color: var(--primary); cursor: pointer; user-select: none;">
+                    {% if new_report_type == 'Lost Item' %}
+                    🤝 This might be my item — Request Connection with Finder (#{{ rep[0] }})
+                    {% else %}
+                    🤝 Notify Searching Owner — Coordinate Handover with #{{ rep[0] }}
+                    {% endif %}
+                </summary>
+                <form method="POST" action="{{ url_for('request_connection') }}" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="source_report_id" value="{{ new_report_id }}">
+                    <input type="hidden" name="target_report_id" value="{{ rep[0] }}">
+                    {% if claim_token %}
+                    <input type="hidden" name="claim_token" value="{{ claim_token }}">
+                    {% endif %}
+                    {% if new_report_type == 'Lost Item' %}
+                    <textarea name="message" rows="2" placeholder="Describe identifying marks, serial numbers, wallpapers, or details to safely verify your ownership..." required style="width: 100%; padding: 8px 10px; font-size: 0.85rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); color: var(--text-primary); font-family: inherit; resize: vertical;"></textarea>
+                    <input type="text" name="contact_info" placeholder="Your contact phone or email (shared ONLY if recipient accepts)" style="width: 100%; padding: 8px 10px; font-size: 0.85rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); color: var(--text-primary);">
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem;">
+                            Request Return Verification
+                        </button>
+                    </div>
+                    {% else %}
+                    <textarea name="message" rows="2" placeholder="Provide instructions on where or how the searching owner can collect or verify their item (e.g. security office, department desk)..." required style="width: 100%; padding: 8px 10px; font-size: 0.85rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); color: var(--text-primary); font-family: inherit; resize: vertical;"></textarea>
+                    <input type="text" name="contact_info" placeholder="Your contact phone or email (shared ONLY if recipient accepts)" style="width: 100%; padding: 8px 10px; font-size: 0.85rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); color: var(--text-primary);">
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem;">
+                            Notify Owner / Coordinate Handover
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
+            </details>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% elif report %}
+    <!-- Single report fallback -->
+    <div class="match-details-box" style="text-align: left; margin-bottom: 24px;">
+        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">{{ report[1] }}</span>
+        <h2 style="font-size: 1.25rem; color: var(--text-primary); margin: 4px 0 8px;">{{ report[2].title() }}</h2>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);"><strong>Category:</strong> {{ report[3] }}</p>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);"><strong>Description:</strong> {{ report[4] }}</p>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);"><strong>Location:</strong> {{ report[5] }}</p>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);"><strong>Contact:</strong> {{ report[6]|mask_phone }}</p>
+    </div>
+    {% endif %}
+
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="{{ url_for('matches') }}" class="btn-primary">
+            See All Matches
+        </a>
+        <a href="{{ url_for('reports') }}" class="btn-secondary">
+            Browse All Reports
+        </a>
+        {% if is_guest and claim_token %}
+        <a href="{{ url_for('guest_manage_report', token=claim_token) }}" class="btn-secondary">
+            Manage My Report
+        </a>
+        {% else %}
+        <a href="{{ url_for('dashboard') }}" class="btn-secondary">
+            Return to Dashboard
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

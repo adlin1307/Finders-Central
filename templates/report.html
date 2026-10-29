@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Report an Item — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="form-wrapper" style="max-width: 620px;">
+    <div class="form-header">
+        <h1>Report an Item</h1>
+        <p>Help reconnect campus members with their missing belongings.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert-box alert-error">
+        <span>⚠️</span> {{ error }}
+    </div>
+    {% endif %}
+
+    {% if not session.get('user') or session.get('user') == 'Guest' %}
+    <div class="alert-box" style="background: var(--primary-subtle); border-color: var(--primary-border); color: var(--primary); margin-bottom: 20px; font-size: 0.88rem; line-height: 1.45;">
+        <span>ℹ️</span> <span><strong>Guest Mode:</strong> Visitors without college credentials can report lost or found items freely. You will receive a secure private claim link to manage, update, or remove your report.</span>
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label class="form-label" for="item_type">Report Type</label>
+            <select name="item_type" id="item_type" required>
+                <option value="">-- Select Report Type --</option>
+                <option value="Lost Item" {% if form_data and form_data.get('item_type') == 'Lost Item' %}selected{% endif %}>🔍 Lost Item (I lost something)</option>
+                <option value="Found Item" {% if form_data and form_data.get('item_type') == 'Found Item' %}selected{% endif %}>📦 Found Item (I found something)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="item_name">Item Name</label>
+            <input
+                type="text"
+                id="item_name"
+                name="item_name"
+                value="{{ form_data.get('item_name', '') if form_data else '' }}"
+                placeholder="e.g. Blue Hydroflask, Apple AirPods Pro"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="category">Category</label>
+            <select name="category" id="category" required>
+                <option value="">-- Select Category --</option>
+                {% set sel_cat = form_data.get('category', '') if form_data else '' %}
+                <option value="Electronics" {% if sel_cat == 'Electronics' %}selected{% endif %}>Electronics</option>
+                <option value="Jewellery" {% if sel_cat == 'Jewellery' %}selected{% endif %}>Jewellery</option>
+                <option value="Bags" {% if sel_cat == 'Bags' %}selected{% endif %}>Bags & Backpacks</option>
+                <option value="ID Cards" {% if sel_cat == 'ID Cards' %}selected{% endif %}>ID Cards & Licenses</option>
+                <option value="Books" {% if sel_cat == 'Books' %}selected{% endif %}>Books & Notebooks</option>
+                <option value="Clothing" {% if sel_cat == 'Clothing' %}selected{% endif %}>Clothing & Apparel</option>
+                <option value="Accessories" {% if sel_cat == 'Accessories' %}selected{% endif %}>Accessories & Watches</option>
+                <option value="Water Bottles" {% if sel_cat == 'Water Bottles' %}selected{% endif %}>Water Bottles & Flasks</option>
+                <option value="Other" {% if sel_cat == 'Other' or (sel_cat and sel_cat not in ['Electronics','Jewellery','Bags','ID Cards','Books','Clothing','Accessories','Water Bottles']) %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="other-category-group" style="{% if sel_cat == 'Other' or (sel_cat and sel_cat not in ['Electronics','Jewellery','Bags','ID Cards','Books','Clothing','Accessories','Water Bottles']) %}display: block;{% else %}display: none;{% endif %}">
+            <label class="form-label" for="other-category">Specify Custom Category</label>
+            <input
+                type="text"
+                id="other-category"
+                name="other_category"
+                value="{{ form_data.get('other_category', '') if form_data else '' }}"
+                placeholder="Enter custom category name"
+            >
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="description">Detailed Description</label>
+            <textarea
+                id="description"
+                name="description"
+                placeholder="Include color, distinctive stickers, scratches, brand, or unique identifying marks..."
+                required
+            >{{ form_data.get('description', '') if form_data else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="location">Location Lost or Found</label>
+            <input
+                type="text"
+                id="location"
+                name="location"
+                value="{{ form_data.get('location', '') if form_data else '' }}"
+                placeholder="e.g. Central Library 2nd Floor, Food Court Table 4"
+                required
+            >
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+                <label class="form-label" for="contact">10-Digit Mobile Number</label>
+                <input
+                    type="tel"
+                    id="contact"
+                    name="contact"
+                    value="{{ form_data.get('contact', '') if form_data else '' }}"
+                    placeholder="e.g. 9876543210"
+                    pattern="[0-9]{10}"
+                    maxlength="10"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Contact Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{ form_data.get('email', '') if form_data else '' }}"
+                    placeholder="student@example.com"
+                    required
+                >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Item Photo (Optional)</label>
+            <label class="file-upload-box" for="image_input">
+                <span style="font-size: 1.8rem;">📷</span>
+                <p style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin: 6px 0 2px;">
+                    Click to select an image
+                </p>
+                <p style="font-size: 0.78rem; color: var(--text-muted);">
+                    Supports PNG, JPG, JPEG, WEBP, AVIF (Max 5MB)
+                </p>
+                <input
+                    type="file"
+                    id="image_input"
+                    name="image"
+                    accept="image/*"
+                    onchange="previewImage(event)"
+                    style="display: none;"
+                >
+            </label>
+
+            <div class="preview-container">
+                <img id="preview-image" class="preview-img" style="display:none;" alt="Upload preview">
+            </div>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 14px; padding: 14px;">
+            Submit Report
+        </button>
+    </form>
+</div>
+{% endblock %}

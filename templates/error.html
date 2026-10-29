@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error_title|default("Error") }} — Finder's Central{% endblock %}
+
+{% block content %}
+<div class="empty-state-box" style="text-align: center; padding: 48px 20px; background: var(--bg-surface); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); max-width: 600px; margin: 40px auto; box-shadow: var(--shadow-sm);">
+    <div style="font-size: 3rem; margin-bottom: 12px;">🔒</div>
+    <h2 style="font-size: 1.4rem; margin-bottom: 10px; color: var(--text-primary); font-family: 'Outfit', sans-serif;">
+        {{ error_title|default("Access Restricted") }}
+    </h2>
+    <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 20px; line-height: 1.5;">
+        {{ error_message|default("You do not have permission to view or manage this resource. If this is a guest report, please ensure you are using your private claim link.") }}
+    </p>
+    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <a href="{{ url_for('reports') }}" class="btn-primary" style="padding: 10px 20px; font-size: 0.88rem; text-decoration: none;">
+            Browse All Reports
+        </a>
+        {% if user and user != 'Guest' %}
+        <a href="{{ url_for('my_reports') }}" class="btn-secondary" style="padding: 10px 20px; font-size: 0.88rem; text-decoration: none;">
+            Go to My Reports
+        </a>
+        {% else %}
+        <a href="{{ url_for('guest_my_reports') }}" class="btn-secondary" style="padding: 10px 20px; font-size: 0.88rem; text-decoration: none;">
+            My Guest Reports
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
